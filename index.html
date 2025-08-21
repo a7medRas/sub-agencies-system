@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>سيستم الوكالات الفرعية</title>
+  <meta name="color-scheme" content="dark light">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand:#6C63FF;     /* لون مميز وجذاب للعناوين */
+      --brand-ink:#4C47B0; /* درجة أغمق للنصوص البارزة */
+      --bg:#0f0f12;        /* خلفية داكنة أنيقة */
+      --card:#15161a;      /* خلفيات البطاقات */
+      --muted:#9aa3ad;     /* نصوص ثانوية */
+      --ok:#22c55e;        /* نجاح */
+      --warn:#f59e0b;      /* تحذير */
+      --danger:#ef4444;    /* خطر */
+      --border:#26282f;    /* حدود خفيفة */
+      --shadow:0 10px 30px rgba(0,0,0,.25);
+      --radius-xl:20px;    /* زوايا دائرية كبيرة */
+      --gap:14px;
+      --focus: 0 0 0 3px rgba(108,99,255,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{font-family:"Cairo",system-ui;-webkit-font-smoothing:antialiased;background:var(--bg);color:#e9edf1;margin:0}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit}
+    .container{max-width:1200px;margin:0 auto;padding:24px}
+    header.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .title{font-weight:800;font-size:28px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{background:var(--brand);border:none;color:#fff;padding:10px 14px;border-radius:12px;cursor:pointer;box-shadow:var(--shadow);font-weight:700}
+    .btn.secondary{background:#22252e}
+    .btn.ghost{background:transparent;border:1px solid var(--border);color:#e9edf1}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn:hover{filter:brightness(1.05)}
+    .input, select{background:#101217;border:1px solid var(--border);color:#e9edf1;border-radius:12px;padding:10px 12px;outline:none}
+    .input:focus, select:focus, textarea:focus{box-shadow:var(--focus);border-color:#3a3f4d}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);padding:18px}
+    .agency-card{grid-column:span 4;display:flex;flex-direction:column;gap:10px}
+    .agency-name{font-weight:800;font-size:24px;color:var(--brand)}
+    .agency-code{font-weight:700;color:var(--brand-ink);display:flex;align-items:center;gap:6px}
+    .subtle{color:var(--muted);font-size:14px}
+    .badges{display:flex;gap:10px;flex-wrap:wrap}
+    .badge{background:#101217;border:1px solid var(--border);border-radius:14px;padding:10px 12px;display:flex;gap:8px;align-items:center}
+    .badge .val{font-weight:800}
+    .agency-footer{display:flex;gap:10px;margin-top:6px}
+    .muted{opacity:.85}
+
+    /* قائمة الوكالات Responsive */
+    @media (max-width: 1024px){.agency-card{grid-column: span 6}}
+    @media (max-width: 640px){.agency-card{grid-column: span 12}}
+
+    /* شريط البحث */
+    .searchbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .searchbar > *{flex:1 1 220px}
+
+    /* مودال */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:40}
+    .modal.open{display:flex}
+    .modal .panel{background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);width:min(780px,100%);padding:18px}
+    .modal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .modal h3{margin:0;font-size:20px}
+
+    form.grid-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    form.grid-form .full{grid-column:1/-1}
+    label{font-size:13px;color:#b6bec7}
+    .hint{font-size:12px;color:var(--muted)}
+
+    /* تفاصيل الوكالة */
+    .detail{display:none}
+    .detail.active{display:block}
+    .detail .header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:10px 0}
+    .pill{background:#101217;border:1px solid var(--border);padding:8px 10px;border-radius:999px}
+
+    .broadcaster{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+    .b-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .b-name{font-size:18px;font-weight:700}
+    .b-id{font-weight:600;color:var(--muted)}
+    .b-country{color:#cbd5e1}
+
+    .bars{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+    .bar{background:#0e1015;border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;align-items:center;justify-content:space-between}
+    .bar .label{color:#aab3bd}
+    .bar .value{font-weight:800}
+
+    .b-actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+
+    .toast{position:fixed;inset-inline-start:50%;transform:translateX(-50%);bottom:24px;background:#12151d;border:1px solid var(--border);padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);display:none;z-index:50}
+    .toast.show{display:block}
+
+    .copy-ico{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;background:#101217;border:1px solid var(--border);border-radius:6px;cursor:pointer}
+    .copy-ico:hover{filter:brightness(1.1)}
+
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#101217;border:1px solid var(--border);border-radius:8px;padding:2px 6px;font-size:12px}
+    .divider{height:1px;background:var(--border);margin:10px 0}
+
+    .tooltip{position:relative}
+    .tooltip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);inset-inline-start:0;background:#0f1116;border:1px solid var(--border);padding:6px 8px;border-radius:8px;white-space:nowrap;font-size:12px;color:#e9edf1}
+
+    .empty{padding:24px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);text-align:center}
+
+    .link{color:#a0b4ff;text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="top">
+      <div class="title">الوكالات الفرعية</div>
+      <div class="toolbar">
+        <button class="btn" id="btnNewAgency">+ وكالة</button>
+        <button class="btn secondary" id="btnExportAll">تصدير JSON</button>
+        <button class="btn ghost" id="btnBackHome" style="display:none">العودة للقائمة</button>
+      </div>
+    </header>
+
+    <!-- شريط البحث -->
+    <div id="listTools" class="searchbar">
+      <input id="searchInput" class="input" placeholder="بحث بالاسم / الكود / المسؤول / Likee ID" />
+      <select id="countryFilter">
+        <option value="">كل الدول</option>
+        <option>Egypt</option>
+        <option>Saudi Arabia</option>
+        <option>United Arab Emirates</option>
+        <option>Morocco</option>
+        <option>Algeria</option>
+      </select>
+    </div>
+
+    <!-- قائمة الوكالات -->
+    <div id="agenciesList" class="grid"></div>
+
+    <!-- تفاصيل الوكالة -->
+    <section id="agencyDetail" class="detail">
+      <div class="header">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn ghost" id="backToList">← عودة</button>
+          <div class="pill" id="detailCode"></div>
+        </div>
+        <div class="toolbar">
+          <button class="btn" id="btnAddBroadcaster">+ إضافة مذيع</button>
+          <button class="btn secondary" id="btnBilling">إعدادات الفاتورة</button>
+          <button class="btn ghost" id="btnExportCSV">تصدير CSV</button>
+        </div>
+      </div>
+
+      <!-- بطاقة الوكالة أعلى التفاصيل -->
+      <div id="detailAgencyCard" class="card" aria-live="polite"></div>
+
+      <h3 style="margin:14px 0 8px 0">المذيعون</h3>
+      <div id="broadcastersList"></div>
+    </section>
+  </div>
+
+  <!-- مودال: إنشاء/تعديل وكالة -->
+  <div class="modal" id="modalAgency">
+    <div class="panel">
+      <header>
+        <h3 id="agencyModalTitle">إنشاء وكالة</h3>
+        <button class="btn ghost" id="closeAgencyModal">إغلاق (Esc)</button>
+      </header>
+      <form class="grid-form" id="agencyForm">
+        <div>
+          <label>اسم الوكالة *</label>
+          <input class="input" name="agencyName" required placeholder="مثال: وكالة ذيب الشرق الأوسط" />
+        </div>
+        <div>
+          <label>اسم الوكيل *</label>
+          <input class="input" name="agentName" required />
+        </div>
+        <div>
+          <label>الدولة *</label>
+          <input class="input" name="agentCountry" required placeholder="مثال: Egypt" />
+        </div>
+        <div>
+          <label>Likee ID *</label>
+          <input class="input" name="agentLikeeId" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+          <div class="hint">أرقام فقط</div>
+        </div>
+        <div class="full">
+          <label>اسم مسؤول الوكالة *</label>
+          <input class="input" name="managerName" required />
+        </div>
+        <div class="divider full"></div>
+        <div>
+          <label>سعر التحويل (الفاصوليا ← العملة)</label>
+          <input class="input" type="number" step="0.0001" name="beansToCurrencyRate" value="0.01" />
+        </div>
+        <div>
+          <label>رسوم أساسية (baseFee)</label>
+          <input class="input" type="number" step="0.01" name="baseFee" value="0" />
+        </div>
+        <div>
+          <label>Bonus الساعة</label>
+          <input class="input" type="number" step="0.01" name="hourBonus" value="0" />
+        </div>
+        <div>
+          <label>Bonus اليوم</label>
+          <input class="input" type="number" step="0.01" name="dayBonus" value="0" />
+        </div>
+        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="submit" class="btn">حفظ (Enter)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- مودال: إضافة/تعديل مذيع -->
+  <div class="modal" id="modalBroadcaster">
+    <div class="panel">
+      <header>
+        <h3 id="broadcasterModalTitle">إضافة مذيع</h3>
+        <button class="btn ghost" id="closeBroadcasterModal">إغلاق (Esc)</button>
+      </header>
+      <form class="grid-form" id="broadcasterForm">
+        <div>
+          <label>اسم المذيع *</label>
+          <input class="input" name="name" required />
+        </div>
+        <div>
+          <label>Likee ID *</label>
+          <input class="input" name="likeeId" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+        </div>
+        <div>
+          <label>الدولة *</label>
+          <input class="input" name="country" required />
+        </div>
+        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="submit" class="btn">حفظ (Enter)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- مودال: إعدادات الفاتورة -->
+  <div class="modal" id="modalBilling">
+    <div class="panel">
+      <header>
+        <h3>إعدادات الفاتورة</h3>
+        <button class="btn ghost" id="closeBillingModal">إغلاق (Esc)</button>
+      </header>
+      <form class="grid-form" id="billingForm">
+        <div>
+          <label>سعر التحويل (beansToCurrencyRate)</label>
+          <input class="input" type="number" step="0.0001" name="beansToCurrencyRate" />
+        </div>
+        <div>
+          <label>رسوم أساسية (baseFee)</label>
+          <input class="input" type="number" step="0.01" name="baseFee" />
+        </div>
+        <div>
+          <label>Bonus الساعة (hourBonus)</label>
+          <input class="input" type="number" step="0.01" name="hourBonus" />
+        </div>
+        <div>
+          <label>Bonus اليوم (dayBonus)</label>
+          <input class="input" type="number" step="0.01" name="dayBonus" />
+        </div>
+        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="submit" class="btn">تطبيق</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  // ===== Utilities =====
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+  const fmt = (n) => new Intl.NumberFormat('ar-EG').format(n);
+  const fmtMoney = (n) => new Intl.NumberFormat('ar-EG',{style:'currency',currency:'EGP',maximumFractionDigits:2}).format(n||0);
+  function shortNumber(value){
+    if(value==null) return '0';
+    const abs = Math.abs(value);
+    if(abs>=1e9) return (value/1e9).toFixed(2).replace(/\.00$/,'')+'B';
+    if(abs>=1e6) return (value/1e6).toFixed(2).replace(/\.00$/,'')+'M';
+    if(abs>=1e3) return (value/1e3).toFixed(2).replace(/\.00$/,'')+'K';
+    return String(value);
+  }
+  const nowISO = ()=> new Date().toISOString();
+
+  function toast(msg, type='info'){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.style.borderColor = type==='ok'? 'var(--ok)': type==='warn'? 'var(--warn)': type==='danger'? 'var(--danger)': 'var(--border)';
+    t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 1800);
+  }
+
+  function copy(text){
+    navigator.clipboard.writeText(text).then(()=> toast('تم النسخ ✅','ok'));
+  }
+
+  // ===== Persistence (localStorage) =====
+  const DB_KEY = 'subAgenciesDB.v1';
+  const Seed = {
+    agencies:[
+      {
+        id: crypto.randomUUID(),
+        agencyName: 'وكالة ذيب الشرق الأوسط',
+        agencyCode: 'AG-000731',
+        agentName: 'سعيد المصري',
+        agentCountry: 'Egypt',
+        agentLikeeId: '123456789',
+        managerName: 'أحمد يوسف',
+        billingConfig: { beansToCurrencyRate: 0.01, baseFee: 0, hourBonus: 0, dayBonus: 0 },
+        stats: { totalBeans: 0, broadcastersCount: 0, monthlyInvoice: 0 },
+        broadcasters: [],
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        logs: []
+      }
+    ],
+    broadcasters: []
+  };
+
+  function loadDB(){
+    const raw = localStorage.getItem(DB_KEY);
+    if(!raw){
+      localStorage.setItem(DB_KEY, JSON.stringify(Seed));
+      return structuredClone(Seed);
+    }
+    try{ return JSON.parse(raw); }catch{ return structuredClone(Seed); }
+  }
+  function saveDB(db){ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+  let DB = loadDB();
+
+  // ===== Business Logic =====
+  function genAgencyCode(){
+    // صيغة: AG-######
+    const used = new Set(DB.agencies.map(a=>a.agencyCode));
+    let code;
+    do{
+      const n = Math.floor(Math.random()*1000000).toString().padStart(6,'0');
+      code = `AG-${n}`;
+    } while(used.has(code));
+    return code;
+  }
+
+  function computeAgencyStats(agency){
+    const list = DB.broadcasters.filter(b=> b.agencyId===agency.id);
+    const totalBeans = list.reduce((s,b)=> s + Number(b.beans||0), 0);
+    const sumHours   = list.reduce((s,b)=> s + Number(b.hours||0), 0);
+    const sumDays    = list.reduce((s,b)=> s + Number(b.days||0), 0);
+    const bc = list.length;
+    const cfg = agency.billingConfig || {beansToCurrencyRate:0.01, baseFee:0, hourBonus:0, dayBonus:0};
+    const monthlyInvoice = Number(cfg.baseFee||0) + (totalBeans*(Number(cfg.beansToCurrencyRate)||0)) + (sumHours*(Number(cfg.hourBonus)||0)) + (sumDays*(Number(cfg.dayBonus)||0));
+    agency.stats = { totalBeans, broadcastersCount: bc, monthlyInvoice };
+    return agency.stats;
+  }
+
+  function log(agency, text){
+    agency.logs = agency.logs || [];
+    agency.logs.unshift({ ts: nowISO(), text });
+    if(agency.logs.length>50) agency.logs.pop();
+  }
+
+  // ===== Rendering: List Page =====
+  const listEl = $('#agenciesList');
+  const listTools = $('#listTools');
+
+  function renderAgencies(){
+    listEl.innerHTML = '';
+    const q = $('#searchInput').value.trim().toLowerCase();
+    const c = $('#countryFilter').value.trim().toLowerCase();
+
+    const items = DB.agencies.filter(a=>{
+      const hay = [a.agencyName,a.agencyCode,a.managerName,a.agentLikeeId].join(' ').toLowerCase();
+      const matchQ = !q || hay.includes(q);
+      const matchC = !c || (a.agentCountry||'').toLowerCase()===c;
+      return matchQ && matchC;
+    });
+
+    if(items.length===0){
+      listEl.innerHTML = `<div class="empty">لا توجد وكالات. اضغط <span class="kbd">+ وكالة</span> لإضافة أول وكالة.</div>`;
+      return;
+    }
+
+    items.forEach(a=>{
+      computeAgencyStats(a);
+      const card = document.createElement('div');
+      card.className = 'card agency-card';
+      card.innerHTML = `
+        <div class="agency-name">${a.agencyName}</div>
+        <div class="agency-code">${a.agencyCode}
+          <span class="copy-ico" title="نسخ" data-code="${a.agencyCode}">⧉</span>
+        </div>
+        <div class="subtle">${a.agentName} (${a.agentCountry}) · Likee ID: ${a.agentLikeeId}</div>
+        <div class="subtle">مسؤول الوكالة: <b>${a.managerName}</b></div>
+        <div class="badges">
+          <div class="badge tooltip" data-tip="${fmt(a.stats.totalBeans)}">
+            <span>🎉 إجمالي الفاصوليا</span> <span class="val">${shortNumber(a.stats.totalBeans)}</span>
+          </div>
+          <div class="badge">
+            <span>👥 المذيعون</span> <span class="val">${a.stats.broadcastersCount}</span>
+          </div>
+          <div class="badge tooltip" data-tip="${fmtMoney(a.stats.monthlyInvoice)}">
+            <span>💰 الفاتورة الشهرية</span> <span class="val">${fmtMoney(a.stats.monthlyInvoice)}</span>
+          </div>
+        </div>
+        <div class="agency-footer">
+          <button class="btn" data-open="${a.id}">عرض التفاصيل</button>
+          <button class="btn secondary" data-edit="${a.id}">تعديل</button>
+          <button class="btn ghost" data-delete="${a.id}">حذف</button>
+        </div>
+      `;
+      card.querySelector('.copy-ico').addEventListener('click',()=> copy(a.agencyCode));
+      card.querySelector('[data-open]').addEventListener('click',()=> openAgency(a.id));
+      card.querySelector('[data-edit]').addEventListener('click',()=> openAgencyModal(a));
+      card.querySelector('[data-delete]').addEventListener('click',()=> deleteAgency(a.id));
+      listEl.appendChild(card);
+    });
+  }
+
+  // ===== Routing (list vs detail) =====
+  function showList(){
+    $('#agencyDetail').classList.remove('active');
+    $('#agenciesList').style.display='grid';
+    listTools.style.display='flex';
+    $('#btnBackHome').style.display='none';
+    renderAgencies();
+  }
+
+  function showDetail(){
+    $('#agenciesList').style.display='none';
+    listTools.style.display='none';
+    $('#agencyDetail').classList.add('active');
+    $('#btnBackHome').style.display='inline-block';
+  }
+
+  function openAgency(id){
+    location.hash = `#agency/${id}`;
+  }
+
+  function handleHash(){
+    const h = location.hash;
+    const m = h.match(/^#agency\/(.+)$/);
+    if(m){
+      const id = m[1];
+      const agency = DB.agencies.find(a=>a.id===id);
+      if(agency){ renderAgencyDetail(agency); showDetail(); }
+      else { showList(); }
+    }else{
+      showList();
+    }
+  }
+  window.addEventListener('hashchange', handleHash);
+
+  // ===== CRUD: Agencies =====
+  const modalAgency = $('#modalAgency');
+  const agencyForm = $('#agencyForm');
+  let editingAgency = null;
+
+  function openAgencyModal(agency=null){
+    editingAgency = agency;
+    $('#agencyModalTitle').textContent = agency? 'تعديل وكالة' : 'إنشاء وكالة';
+    agencyForm.reset();
+    const cfg = agency?.billingConfig || {beansToCurrencyRate:0.01, baseFee:0, hourBonus:0, dayBonus:0};
+    agencyForm.agencyName.value = agency?.agencyName || '';
+    agencyForm.agentName.value = agency?.agentName || '';
+    agencyForm.agentCountry.value = agency?.agentCountry || '';
+    agencyForm.agentLikeeId.value = agency?.agentLikeeId || '';
+    agencyForm.managerName.value = agency?.managerName || '';
+    agencyForm.beansToCurrencyRate.value = cfg.beansToCurrencyRate;
+    agencyForm.baseFee.value = cfg.baseFee;
+    agencyForm.hourBonus.value = cfg.hourBonus;
+    agencyForm.dayBonus.value = cfg.dayBonus;
+    modalAgency.classList.add('open');
+    setTimeout(()=> agencyForm.agencyName.focus(), 50);
+  }
+
+  function closeAgencyModal(){ modalAgency.classList.remove('open'); }
+  $('#btnNewAgency').addEventListener('click',()=> openAgencyModal());
+  $('#closeAgencyModal').addEventListener('click', closeAgencyModal);
+
+  agencyForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(agencyForm).entries());
+    // تنظيف Likee ID للأرقام فقط
+    data.agentLikeeId = String(data.agentLikeeId||'').replace(/[^0-9]/g,'');
+    const billingConfig = {
+      beansToCurrencyRate: Number(data.beansToCurrencyRate||0),
+      baseFee: Number(data.baseFee||0),
+      hourBonus: Number(data.hourBonus||0),
+      dayBonus: Number(data.dayBonus||0)
+    };
+    if(editingAgency){
+      Object.assign(editingAgency, {
+        agencyName: data.agencyName,
+        agentName: data.agentName,
+        agentCountry: data.agentCountry,
+        agentLikeeId: data.agentLikeeId,
+        managerName: data.managerName,
+        billingConfig,
+        updatedAt: nowISO()
+      });
+      log(editingAgency, 'تم تعديل بيانات الوكالة');
+    }else{
+      const ag = {
+        id: crypto.randomUUID(),
+        agencyName: data.agencyName,
+        agencyCode: genAgencyCode(),
+        agentName: data.agentName,
+        agentCountry: data.agentCountry,
+        agentLikeeId: data.agentLikeeId,
+        managerName: data.managerName,
+        billingConfig,
+        stats: { totalBeans:0, broadcastersCount:0, monthlyInvoice:0 },
+        broadcasters: [],
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        logs: []
+      };
+      DB.agencies.unshift(ag);
+      log(ag, 'تم إنشاء الوكالة');
+    }
+    saveDB(DB);
+    toast('تم الحفظ ✅','ok');
+    closeAgencyModal();
+    renderAgencies();
+  });
+
+  function deleteAgency(id){
+    if(!confirm('سيتم حذف الوكالة وكل المذيعين المرتبطين بها محليًا. متأكد؟')) return;
+    const ag = DB.agencies.find(a=>a.id===id);
+    DB.agencies = DB.agencies.filter(a=>a.id!==id);
+    DB.broadcasters = DB.broadcasters.filter(b=>b.agencyId!==id);
+    saveDB(DB);
+    toast('تم الحذف','warn');
+    if(location.hash===`#agency/${id}`){ location.hash=''; }
+    renderAgencies();
+  }
+
+  // ===== Detail View =====
+  let currentAgency = null;
+  function renderAgencyHeader(agency){
+    computeAgencyStats(agency);
+    $('#detailCode').textContent = agency.agencyCode;
+    $('#detailAgencyCard').innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
+        <div>
+          <div class="agency-name">${agency.agencyName}</div>
+          <div class="subtle">${agency.agentName} (${agency.agentCountry}) · Likee ID: ${agency.agentLikeeId}</div>
+          <div class="subtle">مسؤول الوكالة: <b>${agency.managerName}</b></div>
+        </div>
+        <div class="badges">
+          <div class="badge tooltip" data-tip="${fmt(agency.stats.totalBeans)}">
+            🎉 <span>إجمالي الفاصوليا</span> <span class="val">${shortNumber(agency.stats.totalBeans)}</span>
+          </div>
+          <div class="badge">👥 <span>عدد المذيعين</span> <span class="val">${agency.stats.broadcastersCount}</span></div>
+          <div class="badge tooltip" data-tip="${fmtMoney(agency.stats.monthlyInvoice)}">
+            💰 <span>الفاتورة الشهرية</span> <span class="val">${fmtMoney(agency.stats.monthlyInvoice)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="subtle">آخر تحديث: ${new Date(agency.updatedAt).toLocaleString('ar-EG')}</div>
+    `;
+  }
+
+  function renderBroadcasters(agency){
+    const wrap = $('#broadcastersList');
+    wrap.innerHTML='';
+    const list = DB.broadcasters.filter(b=> b.agencyId===agency.id);
+    if(list.length===0){
+      wrap.innerHTML = `<div class="empty">لا يوجد مذيعون بعد. اضغط <span class="kbd">+ إضافة مذيع</span>.</div>`;
+      return;
+    }
+    list.forEach(b=>{
+      const el = document.createElement('div');
+      el.className = 'broadcaster';
+      el.innerHTML = `
+        <div class="b-top">
+          <div>
+            <div class="b-name">${b.name}</div>
+            <div class="b-id">Likee ID: ${b.likeeId}</div>
+            <div class="b-country">${b.country}</div>
+          </div>
+          <div class="subtle">آخر تحديث: ${new Date(b.updatedAt||b.createdAt).toLocaleString('ar-EG')}</div>
+        </div>
+        <div class="bars">
+          <div class="bar">
+            <div class="label">فاصوليا</div>
+            <div class="value">${fmt(b.beans||0)}</div>
+          </div>
+          <div class="bar">
+            <div class="label">أيام</div>
+            <div class="value">${fmt(b.days||0)} يوم</div>
+          </div>
+          <div class="bar">
+            <div class="label">ساعات</div>
+            <div class="value">${fmt(b.hours||0)} ساعة</div>
+          </div>
+        </div>
+        <div class="b-actions">
+          <button class="btn" data-add-day="${b.id}">+1 يوم نشاط</button>
+          <button class="btn secondary" data-edit-b="${b.id}">تعديل</button>
+          <button class="btn ghost" data-beans="${b.id}">+1000 فاصوليا</button>
+          <button class="btn ghost" data-hours="${b.id}">+1 ساعة</button>
+          <button class="btn ghost" data-del-b="${b.id}">حذف</button>
+        </div>
+      `;
+      // أزرار تفاعل
+      el.querySelector('[data-add-day]').addEventListener('click', (ev)=> addDay(b, ev.target));
+      el.querySelector('[data-edit-b]').addEventListener('click', ()=> openBroadcasterModal(agency, b));
+      el.querySelector('[data-beans]').addEventListener('click', ()=> { b.beans=(Number(b.beans)||0)+1000; b.updatedAt=nowISO(); afterBroadcasterChange(agency); });
+      el.querySelector('[data-hours]').addEventListener('click', ()=> { b.hours=(Number(b.hours)||0)+1; b.updatedAt=nowISO(); afterBroadcasterChange(agency); });
+      el.querySelector('[data-del-b]').addEventListener('click', ()=> deleteBroadcaster(b));
+      wrap.appendChild(el);
+    });
+  }
+
+  function addDay(b, btn){
+    btn.disabled = true; // منع النقر السريع
+    b.days = (Number(b.days)||0) + 1;
+    b.updatedAt = nowISO();
+    toast('تم إضافة يوم نشاط ✅','ok');
+    afterBroadcasterChange(currentAgency);
+    setTimeout(()=> btn.disabled=false, 800);
+  }
+
+  function afterBroadcasterChange(agency){
+    agency.updatedAt = nowISO();
+    saveDB(DB);
+    renderAgencyHeader(agency);
+    renderBroadcasters(agency);
+  }
+
+  function renderAgencyDetail(agency){
+    currentAgency = agency;
+    renderAgencyHeader(agency);
+    renderBroadcasters(agency);
+  }
+
+  // ===== Broadcasters: Create/Edit/Delete =====
+  const modalBroadcaster = $('#modalBroadcaster');
+  const broadcasterForm = $('#broadcasterForm');
+  let editingBroadcaster = null;
+
+  function openBroadcasterModal(agency, b=null){
+    editingBroadcaster = b;
+    broadcasterForm.reset();
+    $('#broadcasterModalTitle').textContent = b? 'تعديل مذيع' : 'إضافة مذيع';
+    broadcasterForm.name.value = b?.name || '';
+    broadcasterForm.likeeId.value = b?.likeeId || '';
+    broadcasterForm.country.value = b?.country || '';
+    modalBroadcaster.classList.add('open');
+    setTimeout(()=> broadcasterForm.name.focus(), 50);
+  }
+  function closeBroadcasterModal(){ modalBroadcaster.classList.remove('open'); }
+  $('#btnAddBroadcaster').addEventListener('click',()=> openBroadcasterModal(currentAgency));
+  $('#closeBroadcasterModal').addEventListener('click', closeBroadcasterModal);
+
+  broadcasterForm.addEventListener('submit',(e)=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(broadcasterForm).entries());
+    // تنظيف Likee ID للأرقام فقط
+    data.likeeId = String(data.likeeId||'').replace(/[^0-9]/g,'');
+    if(editingBroadcaster){
+      Object.assign(editingBroadcaster, {
+        name: data.name, likeeId: data.likeeId, country: data.country, updatedAt: nowISO()
+      });
+      log(currentAgency, `تعديل مذيع: ${editingBroadcaster.name}`);
+    }else{
+      const b = { id: crypto.randomUUID(), name: data.name, likeeId: data.likeeId, country: data.country, beans:0, days:0, hours:0, agencyId: currentAgency.id, createdAt: nowISO(), updatedAt: nowISO() };
+      DB.broadcasters.unshift(b);
+      log(currentAgency, `إضافة مذيع: ${b.name}`);
+    }
+    saveDB(DB);
+    toast('تم الحفظ ✅','ok');
+    closeBroadcasterModal();
+    renderAgencyDetail(currentAgency);
+  });
+
+  function deleteBroadcaster(b){
+    if(!confirm('حذف هذا المذيع؟')) return;
+    DB.broadcasters = DB.broadcasters.filter(x=>x.id!==b.id);
+    saveDB(DB);
+    log(currentAgency, `حذف مذيع: ${b.name}`);
+    toast('تم الحذف','warn');
+    renderAgencyDetail(currentAgency);
+  }
+
+  // ===== Billing Config (per agency) =====
+  const modalBilling = $('#modalBilling');
+  const billingForm = $('#billingForm');
+  $('#btnBilling').addEventListener('click',()=>{
+    const cfg = currentAgency.billingConfig || {beansToCurrencyRate:0.01, baseFee:0, hourBonus:0, dayBonus:0};
+    billingForm.beansToCurrencyRate.value = cfg.beansToCurrencyRate;
+    billingForm.baseFee.value = cfg.baseFee;
+    billingForm.hourBonus.value = cfg.hourBonus;
+    billingForm.dayBonus.value = cfg.dayBonus;
+    modalBilling.classList.add('open');
+  });
+  $('#closeBillingModal').addEventListener('click',()=> modalBilling.classList.remove('open'));
+  billingForm.addEventListener('submit',(e)=>{
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(billingForm).entries());
+    currentAgency.billingConfig = {
+      beansToCurrencyRate: Number(data.beansToCurrencyRate||0),
+      baseFee: Number(data.baseFee||0),
+      hourBonus: Number(data.hourBonus||0),
+      dayBonus: Number(data.dayBonus||0)
+    };
+    currentAgency.updatedAt = nowISO();
+    log(currentAgency, 'تعديل إعدادات الفاتورة');
+    saveDB(DB);
+    modalBilling.classList.remove('open');
+    renderAgencyDetail(currentAgency);
+    toast('تم تطبيق الإعدادات ✅','ok');
+  });
+
+  // ===== Export =====
+  function download(filename, text){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text],{type:'application/json'}));
+    a.download = filename; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 500);
+  }
+  $('#btnExportAll').addEventListener('click',()=>{
+    download('sub_agencies_backup.json', JSON.stringify(DB,null,2));
+  });
+
+  $('#btnExportCSV').addEventListener('click',()=>{
+    if(!currentAgency) return;
+    const list = DB.broadcasters.filter(b=> b.agencyId===currentAgency.id);
+    const rows = [['id','name','likeeId','country','beans','days','hours','updatedAt']]
+      .concat(list.map(b=>[b.id,b.name,b.likeeId,b.country,b.beans,b.days,b.hours,b.updatedAt]));
+    const csv = rows.map(r=> r.map(x=> `"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download = `${currentAgency.agencyCode}_broadcasters.csv`; a.click();
+    setTimeout(()=> URL.revokeObjectURL(a.href), 500);
+  });
+
+  // ===== Keyboard & Misc =====
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){
+      [modalAgency, modalBroadcaster, modalBilling].forEach(m=> m.classList.remove('open'));
+    }
+  });
+
+  $('#backToList').addEventListener('click', ()=> { location.hash=''; });
+  $('#btnBackHome').addEventListener('click', ()=> { location.hash=''; });
+
+  $('#searchInput').addEventListener('input', renderAgencies);
+  $('#countryFilter').addEventListener('change', renderAgencies);
+
+  // ===== Init =====
+  handleHash();
+  renderAgencies();
+
+  // ===== API Placeholders (جاهزة للدمج مستقبلًا) =====
+  // GET /agencies, POST /agencies, PATCH /agencies/:id
+  // POST /agencies/:id/broadcasters
+  // PATCH /broadcasters/:id
+  </script>
+</body>
+</html>
