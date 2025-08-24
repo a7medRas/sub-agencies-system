@@ -1,740 +1,361 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>سيستم الوكالات الفرعية – تسجيل ودخول وصلاحيات</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <meta name="color-scheme" content="dark light">
+  <meta charset="UTF-8">
+  <title>نظام الوكالات</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    :root{
-      --brand:#6C63FF; --brand-ink:#4C47B0; --bg:#0f0f12; --card:#15161a; --muted:#9aa3ad;
-      --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; --border:#26282f; --shadow:0 10px 30px rgba(0,0,0,.25);
-      --radius-xl:20px; --gap:14px; --focus:0 0 0 3px rgba(108,99,255,.35);
-    }
-    *{box-sizing:border-box}
-    html,body{font-family:"Cairo",system-ui;-webkit-font-smoothing:antialiased;background:var(--bg);color:#e9edf1;margin:0}
-    a{color:inherit;text-decoration:none}
-    button{font-family:inherit}
-
-    /* ====== Auth (Login) ====== */
-    .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-    .auth-bg{position:absolute;inset:0; background:radial-gradient(1200px 600px at 80% 20%, rgba(108,99,255,.25), transparent),
-                                   radial-gradient(900px 500px at 10% 90%, rgba(76,71,176,.18), transparent),
-                                   linear-gradient(160deg, #0d0f19 0%, #0f0f12 60%);
-              filter:saturate(1.1)}
-    .floating{position:absolute;inset:auto;opacity:.2;filter:blur(20px)}
-    .login-card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:24px;box-shadow:var(--shadow);
-                width:min(460px,92%);padding:22px 20px 18px}
-    .login-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-    .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#6C63FF,#4C47B0);display:flex;align-items:center;justify-content:center;font-weight:800}
-    .login-title{font-weight:800;font-size:22px}
-    .login-sub{color:var(--muted);font-size:13px;margin-top:2px}
-    .input{width:100%;padding:12px 12px;background:#101217;border:1px solid var(--border);border-radius:12px;color:#e9edf1;outline:none}
-    .input:focus{box-shadow:var(--focus);border-color:#3a3f4d}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{background:var(--brand);border:none;color:#fff;padding:12px 14px;border-radius:12px;cursor:pointer;box-shadow:var(--shadow);font-weight:800}
-    .btn.block{width:100%}
-    .btn:hover{filter:brightness(1.05)}
-    .btn.ghost{background:transparent;border:1px solid var(--border);color:#e9edf1}
-    .btn.secondary{background:#22252e}
-    .hint{font-size:12px;color:var(--muted)}
-    .err{color:var(--danger);font-size:13px;margin-top:8px;min-height:18px}
-    .eye{position:absolute;inset-inline-end:10px;top:9px;font-weight:800;opacity:.7;cursor:pointer}
-    .field{position:relative}
-
-    /* ====== App Shell ====== */
-    .container{max-width:1200px;margin:0 auto;padding:24px}
-    header.top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
-    .title{font-weight:800;font-size:28px}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .pill{background:#101217;border:1px solid var(--border);padding:8px 10px;border-radius:999px;color:#cbd5e1}
-
-    .btn.small{padding:8px 10px;font-weight:700}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-
-    .searchbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-    .searchbar > *{flex:1 1 220px}
-
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);padding:18px}
-    .agency-card{grid-column:span 4;display:flex;flex-direction:column;gap:10px}
-    .agency-name{font-weight:800;font-size:24px;color:var(--brand)}
-    .agency-code{font-weight:700;color:var(--brand-ink);display:flex;align-items:center;gap:6px}
-    .subtle{color:var(--muted);font-size:14px}
-    .badges{display:flex;gap:10px;flex-wrap:wrap}
-    .badge{background:#101217;border:1px solid var(--border);border-radius:14px;padding:10px 12px;display:flex;gap:8px;align-items:center}
-    .badge .val{font-weight:800}
-    .agency-footer{display:flex;gap:10px;margin-top:6px}
-
-    @media (max-width: 1024px){.agency-card{grid-column: span 6}}
-    @media (max-width: 640px){.agency-card{grid-column: span 12}}
-
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:40}
-    .modal.open{display:flex}
-    .modal .panel{background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);width:min(820px,100%);padding:18px}
-    .modal header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .modal h3{margin:0;font-size:20px}
-    form.grid-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    form.grid-form .full{grid-column:1/-1}
-    label{font-size:13px;color:#b6bec7}
-
-    .detail{display:none}
-    .detail.active{display:block}
-    .detail .header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:10px 0}
-
-    .broadcaster{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
-    .b-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
-    .b-name{font-size:18px;font-weight:700}
-    .b-id{font-weight:600;color:var(--muted)}
-    .b-country{color:#cbd5e1}
-    .bars{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
-    .bar{background:#0e1015;border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;align-items:center;justify-content:space-between}
-    .bar .label{color:#aab3bd}
-    .bar .value{font-weight:800}
-    .b-actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
-
-    .toast{position:fixed;inset-inline-start:50%;transform:translateX(-50%);bottom:24px;background:#12151d;border:1px solid var(--border);padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);display:none;z-index:50}
-    .toast.show{display:block}
-
-    .copy-ico{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;background:#101217;border:1px solid var(--border);border-radius:6px;cursor:pointer}
-    .copy-ico:hover{filter:brightness(1.1)}
-    .kbd{font-family:ui-monospace,Menlo,monospace;background:#101217;border:1px solid var(--border);border-radius:8px;padding:2px 6px;font-size:12px}
-    .divider{height:1px;background:var(--border);margin:10px 0}
-    .tooltip{position:relative}
-    .tooltip:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);inset-inline-start:0;background:#0f1116;border:1px solid var(--border);padding:6px 8px;border-radius:8px;white-space:nowrap;font-size:12px;color:#e9edf1}
-    .empty{padding:24px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);text-align:center}
-    .link{color:#a0b4ff;text-decoration:underline}
+    body { font-family: 'Cairo', sans-serif; margin: 0; padding: 0; background: #f4f6fa; transition: background .3s, color .3s; }
+    body.dark { background: #222; color: #eee; }
+    header { background: #6c63ff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    header h2 { margin: 0; }
+    .container { padding: 20px; }
+    .hidden { display: none; }
+    input, button, select { padding: 8px; margin: 5px; border-radius: 8px; border: 1px solid #ccc; font-family: 'Cairo', sans-serif; }
+    button { background: #6c63ff; color: white; border: none; cursor: pointer; }
+    button:hover { background: #5b3cc4; }
+    .agency-card { background: white; border-radius: 20px; padding: 20px; margin: 15px 0; box-shadow: 0 4px 10px rgba(0, 0, 0, .1); display: flex; justify-content: space-between; align-items: flex-start; }
+    body.dark .agency-card, body.dark .broadcaster-card { background: #333; color: #eee; }
+    .agency-center { flex: 1; text-align: center; }
+    .agency-name { font-size: 28px; font-weight: bold; background: linear-gradient(90deg, #b8860b, #fff, #daa520); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-size: 200% auto; animation: shine 3s linear infinite; }
+    @keyframes shine { to { background-position: 200% center; } }
+    .agency-code { margin-top: 8px; font-weight: bold; }
+    .copy-btn { font-size: 12px; padding: 3px 6px; margin-left: 6px; background: #6c63ff; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+    .agency-right { text-align: right; min-width: 180px; }
+    .countdown { background: #6c63ff; color: white; padding: 12px 20px; border-radius: 20px; width: fit-content; margin: 15px auto; font-size: 16px; font-weight: bold; }
+    .summary { display: flex; gap: 15px; margin: 15px 0; }
+    .summary .item { flex: 1; background: #f9f9f9; padding: 15px; border-radius: 15px; text-align: center; }
+    body.dark .summary .item { background: #444; }
+    .broadcaster-card { background: white; border-radius: 15px; padding: 15px; margin: 10px 0; box-shadow: 0 3px 8px rgba(0, 0, 0, .1); }
+    .progress-bar { background: #eee; border-radius: 15px; height: 10px; margin: 6px 0; }
+    .progress { height: 100%; border-radius: 15px; background: #6c63ff; }
+    .ranking-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .ranking-table th, .ranking-table td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    .chart-container { width: 100%; max-width: 600px; margin: 20px auto; }
   </style>
 </head>
 <body>
-  <!-- ===== Auth Page ===== -->
-  <section id="auth" class="auth-wrap">
-    <div class="auth-bg"></div>
-    <img class="floating" style="top:4%; inset-inline-start:6%; width:180px" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Ccircle cx='160' cy='160' r='120' fill='%236c63ff'/%3E%3C/svg%3E" alt=""/>
-    <div class="login-card">
-      <div class="login-header">
-        <div class="logo">ذ</div>
-        <div>
-          <div class="login-title">تسجيل الدخول</div>
-          <div class="login-sub">ادخل بيانات حساب الوكالة للوصول إلى النظام</div>
-        </div>
+<header>
+  <h2 id="title">📊 نظام الوكالات</h2>
+  <div>
+    <span id="roleLabel" style="margin-right:15px;font-weight:bold;"></span>
+    <button onclick="toggleLang()" id="langBtn">EN</button>
+    <button onclick="toggleDarkMode()" id="modeBtn">🌙</button>
+    <button id="dashboardBtn" class="hidden" onclick="showDashboard()">📊 Dashboard</button>
+    <button onclick="logout()" id="logoutBtn" class="hidden">🚪 خروج</button>
+  </div>
+</header>
+
+<!-- Login -->
+<div class="container" id="loginPage">
+  <h3 id="loginTitle">🔐 تسجيل الدخول</h3>
+  <input id="loginUser" placeholder="👤 اسم المستخدم"><br>
+  <input type="password" id="loginPass" placeholder="🔑 كلمة المرور"><br>
+  <button onclick="login()" id="loginBtn">دخول</button>
+  <p id="loginError" style="color:red"></p>
+</div>
+
+<!-- Home -->
+<div class="container hidden" id="homePage">
+  <h3 id="agenciesLabel">🏢 الوكالات</h3>
+  <button id="addAgencyBtn" onclick="showAgencyForm()">➕ إضافة وكالة</button>
+  <div id="agenciesList"></div>
+</div>
+
+<!-- Agency Page -->
+<div class="container hidden" id="agencyPage">
+  <button onclick="goHome()" id="backBtn">⬅ رجوع</button>
+  <div id="agencyInfo"></div>
+  <div class="summary">
+    <div class="item" id="beansSummary"></div>
+    <div class="item" id="broadcastersSummary"></div>
+    <div class="item" id="invoiceSummary"></div>
+  </div>
+  <div style="text-align:center;margin:10px 0;">
+    <button onclick="exportInvoiceExcel()">📊 تصدير Excel</button>
+    <button onclick="exportInvoicePDF()">📄 تصدير PDF</button>
+  </div>
+  <h3 id="broadcastersLabel">🎙 المذيعين</h3>
+  <button id="addBroadcasterBtn" onclick="showBroadcasterForm()">➕ إضافة مذيع</button>
+  <div id="broadcasters"></div>
+</div>
+
+<!-- Dashboard -->
+<div class="container hidden" id="dashboardPage">
+  <button onclick="goHomeFromDashboard()">⬅ رجوع</button>
+  <h3>📊 لوحة التحكم (Admin)</h3>
+  <div class="chart-container"><canvas id="beansLine"></canvas></div>
+  <div class="chart-container"><canvas id="countryPie"></canvas></div>
+  <div class="chart-container"><canvas id="topBroadcastersBar"></canvas></div>
+  <h3>🏆 أفضل 10</h3>
+  <table class="ranking-table" id="rankingTable">
+    <thead><tr><th>#</th><th>الاسم</th><th>Beans</th><th>Badge</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- Forms -->
+<div class="container hidden" id="agencyForm">
+  <h3 id="agencyFormTitle">➕ وكالة جديدة</h3>
+  <input id="agencyName" placeholder="اسم الوكالة"><br>
+  <input id="agencyAgent" placeholder="اسم الوكيل"><br>
+  <input id="agencyCountry" placeholder="الدولة"><br>
+  <input id="agencyLikee" placeholder="Likee ID"><br>
+  <input id="agencyManager" placeholder="مدير الوكالة"><br>
+  <button onclick="saveAgency()">💾 حفظ</button>
+  <button onclick="cancelForms()">❌ إلغاء</button>
+</div>
+
+<div class="container hidden" id="broadcasterForm">
+  <h3 id="broadcasterFormTitle">➕ مذيع جديد</h3>
+  <input id="broadcasterName" placeholder="اسم المذيع"><br>
+  <input id="broadcasterId" placeholder="ID"><br>
+  <input id="broadcasterCountry" placeholder="الدولة"><br>
+  <input id="broadcasterBeans" type="number" placeholder="Beans"><br>
+  <input id="broadcasterDays" type="number" placeholder="أيام"><br>
+  <input id="broadcasterHours" type="number" placeholder="ساعات"><br>
+  <button onclick="saveBroadcaster()">💾 حفظ</button>
+  <button onclick="cancelForms()">❌ إلغاء</button>
+</div>
+
+<script>
+// بيانات أولية
+let users=[
+  {username:"admin",password:"123",role:"Admin"},
+  {username:"viewer",password:"000",role:"Viewer"}
+];
+let agencies=[{
+  id:"AG-123456",name:"وكالة النور",agentName:"علي",country:"🇪🇬",likee:"889900",manager:"أحمد",
+  agentUser:"agentAG123456",agentPass:"222",
+  broadcasters:[
+    {name:"محمود",id:"1001",country:"🇪🇬",beans:550000,days:20,hours:80},
+    {name:"ليلى",id:"1002",country:"🇸🇦",beans:1200000,days:28,hours:150}
+  ]
+}];
+users.push({username:"manager1",password:"111",role:"Manager",agencyIndex:0});
+users.push({username:"agentAG123456",password:"222",role:"Agent",agencyIndex:0});
+
+// جدول الرواتب
+const salaryTable=[
+ {level:"S18",beans:50000,salary:200},
+ {level:"S6",beans:500000,salary:3200},
+ {level:"S10",beans:1000000,salary:6400},
+ {level:"F",beans:10000,salary:50}
+];
+function calculateSalary(beans){
+  let level="F",salary=0;
+  salaryTable.forEach(l=>{if(beans>=l.beans){level=l.level;salary=l.salary;}});
+  return {level,salary};
+}
+
+let currentUser=null,currentAgency=0,editingAgency=null,editingBroadcaster=null;
+
+// Login/Logout
+function login(){
+  let u=loginUser.value,p=loginPass.value;
+  let user=users.find(x=>x.username===u&&x.password===p);
+  if(!user){loginError.innerText="❌ خطأ";return;}
+  currentUser=user;
+  loginPage.classList.add("hidden");
+  logoutBtn.classList.remove("hidden");
+
+  // 👤 عرض الدور الحالي
+  roleLabel.innerText = "👤 الدور: " + currentUser.role;
+
+  if(user.role==="Admin"){
+    homePage.classList.remove("hidden");
+    dashboardBtn.classList.remove("hidden");
+    renderAgencies(); // ✅ عرض الوكالات مباشرة
+  }
+  else if(user.role==="Viewer"){
+    homePage.classList.remove("hidden");
+    renderAgencies(); // ✅ عرض الوكالات مباشرة
+  }
+  else openAgency(user.agencyIndex,true);
+}
+function logout(){
+  currentUser=null;
+  roleLabel.innerText = "";
+  loginPage.classList.remove("hidden");
+  homePage.classList.add("hidden");
+  agencyPage.classList.add("hidden");
+  dashboardPage.classList.add("hidden");
+  logoutBtn.classList.add("hidden");
+  dashboardBtn.classList.add("hidden");
+}
+
+// Agencies
+function renderAgencies(){
+  agenciesList.innerHTML="";
+  agencies.forEach((a,i)=>{
+    let totalBeans=0,totalSalary=0;a.broadcasters.forEach(b=>{let {salary}=calculateSalary(b.beans);totalBeans+=b.beans;totalSalary+=salary;});
+    let div=document.createElement("div");div.className="agency-card";
+    div.innerHTML=`
+      <div class="agency-center">
+        <div class="agency-name">${a.name}</div>
+        <div class="agency-code">${a.id} <button class="copy-btn" onclick="copyCode('${a.id}')">📋 نسخ</button></div>
+        <div>${a.country}</div>
       </div>
-      <form id="loginForm" onsubmit="return false" style="display:grid;gap:10px;margin-top:10px">
-        <div>
-          <label class="hint">اسم المستخدم</label>
-          <input class="input" id="loginUser" autocomplete="username" placeholder="مثال: manager-ذيب" />
-        </div>
-        <div class="field">
-          <label class="hint">كلمة السر</label>
-          <input class="input" id="loginPass" type="password" autocomplete="current-password" placeholder="••••••" />
-          <span class="eye" id="togglePass">👁</span>
-        </div>
-        <div class="row">
-          <button class="btn" id="btnLogin" type="submit">دخول</button>
-          <button class="btn ghost" id="btnFillDemo" type="button">تجربة سريعة</button>
-          <button class="btn secondary" id="btnResetData" type="button" title="إعادة تهيئة البيانات">إعادة تهيئة</button>
-        </div>
-        <div class="hint">المشرف العام: <b>admin / 1234</b> — الوكيل (عرض): <b>viewer / 0000</b></div>
-        <div class="err" id="loginMsg"></div>
-      </form>
-    </div>
-  </section>
-
-  <!-- ===== App Page ===== -->
-  <div id="app" style="display:none">
-    <div class="container">
-      <header class="top">
-        <div class="title">الوكالات الفرعية</div>
-        <div class="toolbar">
-          <span class="pill" id="userBadge">غير مسجل</span>
-          <button class="btn secondary small" id="btnLogout">خروج</button>
-          <button class="btn small" id="btnNewAgency">+ وكالة</button>
-          <button class="btn ghost small" id="btnExportAll">تصدير JSON</button>
-          <button class="btn ghost small" id="btnBackHome" style="display:none">العودة للقائمة</button>
-        </div>
-      </header>
-
-      <div id="listTools" class="searchbar">
-        <input id="searchInput" class="input" placeholder="بحث بالاسم / الكود / المسؤول / Likee ID" />
-        <select id="countryFilter" class="input">
-          <option value="">كل الدول</option>
-          <option>Egypt</option>
-          <option>Saudi Arabia</option>
-          <option>United Arab Emirates</option>
-          <option>Morocco</option>
-          <option>Algeria</option>
-        </select>
+      <div class="agency-right">
+        <p>👤 الوكيل: ${a.agentName}</p>
+        <p>📱 Likee ID: ${a.likee}</p>
+        <p>👨‍💼 المدير: ${a.manager}</p>
       </div>
-
-      <div id="agenciesList" class="grid"></div>
-
-      <section id="agencyDetail" class="detail">
-        <div class="header">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <button class="btn ghost small" id="backToList">← عودة</button>
-            <div class="pill" id="detailCode"></div>
-          </div>
-          <div class="toolbar">
-            <button class="btn small" id="btnAddBroadcaster">+ إضافة مذيع</button>
-            <button class="btn ghost small" id="btnBilling">إعدادات الفاتورة</button>
-            <button class="btn ghost small" id="btnPayroll">جدول الرواتب</button>
-            <button class="btn ghost small" id="btnAuthSettings">إعدادات الدخول</button>
-            <button class="btn ghost small" id="btnExportCSV">تصدير CSV</button>
-          </div>
-        </div>
-        <div id="detailAgencyCard" class="card" aria-live="polite"></div>
-        <h3 style="margin:14px 0 8px 0">المذيعون</h3>
-        <div id="broadcastersList"></div>
-      </section>
-    </div>
-  </div>
-
-  <!-- === Modals === -->
-  <!-- وكالة -->
-  <div class="modal" id="modalAgency">
-    <div class="panel">
-      <header>
-        <h3 id="agencyModalTitle">إنشاء وكالة</h3>
-        <button class="btn ghost" id="closeAgencyModal">إغلاق (Esc)</button>
-      </header>
-      <form class="grid-form" id="agencyForm">
-        <div>
-          <label>اسم الوكالة *</label>
-          <input class="input" name="agencyName" required />
-        </div>
-        <div>
-          <label>اسم الوكيل *</label>
-          <input class="input" name="agentName" required />
-        </div>
-        <div>
-          <label>الدولة *</label>
-          <input class="input" name="agentCountry" required />
-        </div>
-        <div>
-          <label>Likee ID *</label>
-          <input class="input" name="agentLikeeId" inputmode="text" required oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'')" />
-          <div class="hint">حروف إنجليزية وأرقام فقط</div>
-        </div>
-        <div class="full">
-          <label>اسم مسؤول الوكالة *</label>
-          <input class="input" name="managerName" required />
-        </div>
-        <div class="divider full"></div>
-        <div>
-          <label>سعر التحويل (Beans → العملة)</label>
-          <input class="input" type="number" step="0.0001" name="beansToCurrencyRate" value="0.01" />
-        </div>
-        <div>
-          <label>رسوم أساسية (baseFee)</label>
-          <input class="input" type="number" step="0.01" name="baseFee" value="0" />
-        </div>
-        <div>
-          <label>Bonus الساعة</label>
-          <input class="input" type="number" step="0.01" name="hourBonus" value="0" />
-        </div>
-        <div>
-          <label>Bonus اليوم</label>
-          <input class="input" type="number" step="0.01" name="dayBonus" value="0" />
-        </div>
-        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
-          <button type="submit" class="btn">حفظ</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- مذيع -->
-  <div class="modal" id="modalBroadcaster">
-    <div class="panel">
-      <header>
-        <h3 id="broadcasterModalTitle">إضافة مذيع</h3>
-        <button class="btn ghost" id="closeBroadcasterModal">إغلاق (Esc)</button>
-      </header>
-      <form class="grid-form" id="broadcasterForm">
-        <div>
-          <label>اسم المذيع *</label>
-          <input class="input" name="name" required />
-        </div>
-        <div>
-          <label>Likee ID *</label>
-          <input class="input" name="likeeId" inputmode="text" required oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'')" />
-        </div>
-        <div>
-          <label>الدولة *</label>
-          <input class="input" name="country" required />
-        </div>
-        <div>
-          <label>فاصوليا (0 – 10,000,000)</label>
-          <input class="input" name="beans" type="number" min="0" max="10000000" value="0" />
-        </div>
-        <div>
-          <label>أيام (حسب الشهر)</label>
-          <input class="input" name="days" type="number" min="0" value="0" />
-        </div>
-        <div>
-          <label>ساعات (حد أقصى 300)</label>
-          <input class="input" name="hours" type="number" min="0" max="300" value="0" />
-        </div>
-        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
-          <button type="submit" class="btn">حفظ</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- إعدادات الفاتورة -->
-  <div class="modal" id="modalBilling">
-    <div class="panel">
-      <header>
-        <h3>إعدادات الفاتورة</h3>
-        <button class="btn ghost" id="closeBillingModal">إغلاق (Esc)</button>
-      </header>
-      <form class="grid-form" id="billingForm">
-        <div>
-          <label>beansToCurrencyRate</label>
-          <input class="input" type="number" step="0.0001" name="beansToCurrencyRate" />
-        </div>
-        <div>
-          <label>baseFee</label>
-          <input class="input" type="number" step="0.01" name="baseFee" />
-        </div>
-        <div>
-          <label>hourBonus</label>
-          <input class="input" type="number" step="0.01" name="hourBonus" />
-        </div>
-        <div>
-          <label>dayBonus</label>
-          <input class="input" type="number" step="0.01" name="dayBonus" />
-        </div>
-        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
-          <button type="submit" class="btn">تطبيق</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- جدول الرواتب لكل وكالة -->
-  <div class="modal" id="modalPayroll">
-    <div class="panel">
-      <header>
-        <h3>جدول الرواتب (بالدولار)</h3>
-        <button class="btn ghost" id="closePayroll">إغلاق (Esc)</button>
-      </header>
-      <form id="payrollForm" class="grid-form">
-        <div class="full">
-          <label>JSON شرائح الرواتب: [{"minBeans":0,"maxBeans":4999,"minHours":30,"minDays":0,"salaryUSD":0}, ...]</label>
-          <textarea class="input" id="payrollJSON" style="height:220px"></textarea>
-          <div class="hint">الراتب يُحسب من أعلى شريحة مستوفاة (فاصوليا ضمن المدى + ساعات ≥ الشرط + أيام ≥ الشرط).</div>
-        </div>
-        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
-          <button class="btn" type="submit">حفظ الجدول</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- إعدادات الدخول لكل وكالة -->
-  <div class="modal" id="modalAuthSettings">
-    <div class="panel">
-      <header>
-        <h3>إعدادات الدخول للوكالة</h3>
-        <button class="btn ghost" id="closeAuthSettings">إغلاق (Esc)</button>
-      </header>
-      <form class="grid-form" id="authSettingsForm">
-        <div>
-          <label>مدير الوكالة – اسم المستخدم</label>
-          <input class="input" name="mUser" />
-        </div>
-        <div>
-          <label>مدير الوكالة – كلمة السر</label>
-          <input class="input" name="mPass" type="password" />
-        </div>
-        <div>
-          <label>الوكيل (عرض فقط) – اسم المستخدم</label>
-          <input class="input" name="vUser" />
-        </div>
-        <div>
-          <label>الوكيل (عرض فقط) – كلمة السر</label>
-          <input class="input" name="vPass" type="password" />
-        </div>
-        <div class="full" style="display:flex;gap:10px;justify-content:flex-end">
-          <button type="submit" class="btn">حفظ بيانات الدخول</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
-
-  <script>
-  // ===== Utilities =====
-  const $ = sel => document.querySelector(sel);
-  const $$ = sel => Array.from(document.querySelectorAll(sel));
-  const fmt = (n) => new Intl.NumberFormat('ar-EG').format(n);
-  const fmtMoney = (n) => new Intl.NumberFormat('ar-EG',{style:'currency',currency:'EGP',maximumFractionDigits:2}).format(n||0);
-  const nowISO = ()=> new Date().toISOString();
-  const clamp = (x,min,max)=> Math.min(max, Math.max(min, Number(x)||0));
-  const daysInCurrentMonth = ()=> { const d=new Date(); return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); };
-  function shortNumber(value){ if(value==null) return '0'; const abs=Math.abs(value); if(abs>=1e9) return (value/1e9).toFixed(2).replace(/\.00$/,'')+'B'; if(abs>=1e6) return (value/1e6).toFixed(2).replace(/\.00$/,'')+'M'; if(abs>=1e3) return (value/1e3).toFixed(2).replace(/\.00$/,'')+'K'; return String(value); }
-  function toast(msg,type='info'){ const t=$('#toast'); t.textContent=msg; t.style.borderColor = type==='ok'? 'var(--ok)': type==='warn'? 'var(--warn)': type==='danger'? 'var(--danger)': 'var(--border)'; t.classList.add('show'); setTimeout(()=> t.classList.remove('show'), 1800); }
-  function copy(text){ navigator.clipboard.writeText(text).then(()=> toast('تم النسخ ✅','ok')); }
-  // تحويل الأرقام العربية/الفارسية إلى إنجليزية
-  function normalizeDigits(str){
-    const map = {'٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9','۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9'};
-    return String(str||'').replace(/[٠-٩۰-۹]/g, d=>map[d]).trim();
-  }
-
-  // ===== Constants =====
-  const DB_KEY = 'subAgenciesDB.v3';
-  const SESSION_KEY = 'subAgencies.session';
-  const SUPERADMIN = {user:'admin', pass:'1234'}; // للحساب التجريبي الأولي
-  const MAX_BEANS=10000000, MAX_HOURS=300;
-
-  // جدول الرواتب العام (من الصورة)
-  const DEFAULT_PAYROLL = [
-    // ساعات شهرية ≥ 30، بدون شرط أيام
-    {minBeans:   2000,    maxBeans:   4499,   minHours:30, minDays:0, salaryUSD:   18}, // F
-    {minBeans:   4500,    maxBeans:  10999,   minHours:30, minDays:0, salaryUSD:   37}, // E
-    {minBeans:  11000,    maxBeans:  25499,   minHours:30, minDays:0, salaryUSD:   90}, // D
-    {minBeans:  25500,    maxBeans:  49999,   minHours:30, minDays:0, salaryUSD:  208}, // C
-    {minBeans:  50000,    maxBeans:  79999,   minHours:30, minDays:0, salaryUSD:  400}, // B
-    {minBeans:  80000,    maxBeans:  99999,   minHours:30, minDays:0, salaryUSD:  612}, // A
-    {minBeans: 100000,    maxBeans: 119999,   minHours:30, minDays:0, salaryUSD:  696}, // S0
-    {minBeans: 120000,    maxBeans: 169999,   minHours:30, minDays:0, salaryUSD:  800}, // S1
-    {minBeans: 170000,    maxBeans: 219999,   minHours:30, minDays:0, salaryUSD: 1000}, // S2
-    {minBeans: 220000,    maxBeans: 299999,   minHours:30, minDays:0, salaryUSD: 1280}, // S3
-    {minBeans: 300000,    maxBeans: 379999,   minHours:30, minDays:0, salaryUSD: 1760}, // S4
-    {minBeans: 380000,    maxBeans: 549999,   minHours:30, minDays:0, salaryUSD: 2240}, // S5
-    {minBeans: 550000,    maxBeans: 639999,   minHours:30, minDays:0, salaryUSD: 3200}, // S6
-    {minBeans: 640000,    maxBeans: 799999,   minHours:30, minDays:0, salaryUSD: 3600}, // S7
-    {minBeans: 800000,    maxBeans:  999999,  minHours:30, minDays:0, salaryUSD: 4480}, // S8
-    {minBeans:1000000,    maxBeans: 1199999,  minHours:30, minDays:0, salaryUSD: 5280}, // S9
-    {minBeans:1200000,    maxBeans: 1459999,  minHours:30, minDays:0, salaryUSD: 6400}, // S10
-    {minBeans:1460000,    maxBeans: 1999999,  minHours:30, minDays:0, salaryUSD: 7200}, // S11
-    {minBeans:2000000,    maxBeans: 2999999,  minHours:30, minDays:0, salaryUSD: 9600}, // S12
-    {minBeans:3000000,    maxBeans: 3999999,  minHours:30, minDays:0, salaryUSD:13760}, // S13
-    {minBeans:4000000,    maxBeans: 4999999,  minHours:30, minDays:0, salaryUSD:19200}, // S14
-    {minBeans:5000000,    maxBeans: 6499999,  minHours:30, minDays:0, salaryUSD:24000}, // S15
-    {minBeans:6500000,    maxBeans: 7999999,  minHours:30, minDays:0, salaryUSD:30400}, // S16
-    {minBeans:8000000,    maxBeans: 9999999,  minHours:30, minDays:0, salaryUSD:36800}, // S17
-    {minBeans:10000000,   maxBeans:1000000000,minHours:30, minDays:0, salaryUSD:40000}  // S18+
-  ];
-
-  // ===== Persistence =====
-  function loadDB(){
-    const raw = localStorage.getItem(DB_KEY);
-    if(!raw){
-      const seedAg = {
-        id: crypto.randomUUID(),
-        agencyName: 'وكالة ذيب الشرق الأوسط',
-        agencyCode: 'AG-000731',
-        agentName: 'سعيد المصري',
-        agentCountry: 'Egypt',
-        agentLikeeId: 'Likee123',
-        managerName: 'أحمد يوسف',
-        billingConfig: { beansToCurrencyRate: 0.01, baseFee: 0, hourBonus: 0, dayBonus: 0 },
-        stats: { totalBeans: 0, broadcastersCount: 0, monthlyInvoice: 0, totalSalariesUSD:0 },
-        broadcasters: [],
-        createdAt: nowISO(), updatedAt: nowISO(), logs: [],
-        loginManager: {user:'manager', pass:'1111'},
-        loginViewer: {user:'viewer', pass:'0000'},
-        payrollTable: DEFAULT_PAYROLL
-      };
-      const DB = {agencies:[seedAg], broadcasters:[]};
-      localStorage.setItem(DB_KEY, JSON.stringify(DB));
-      return DB;
+    `;
+    div.innerHTML+=`<div class="countdown" id="countdown">--</div>`;
+    div.innerHTML+=`<p>🎉${totalBeans} | 👥${a.broadcasters.length} | 💰${totalSalary}$</p>`;
+    div.innerHTML+=`<button onclick="openAgency(${i})">📂 فتح</button>`;
+    if(currentUser.role==="Admin" || currentUser.role==="Manager"){
+      div.innerHTML+=`<button onclick="editAgency(${i})">✏️ تعديل</button><button onclick="deleteAgency(${i})">🗑️ حذف</button>`;
     }
-    try{ return JSON.parse(raw); }catch{ return {agencies:[],broadcasters:[]} }
-  }
-  function saveDB(db){ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
-  let DB = loadDB();
-
-  function loadSession(){ try{ return JSON.parse(localStorage.getItem(SESSION_KEY)); }catch{ return null } }
-  function setSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); SESSION=s; }
-  function clearSession(){ localStorage.removeItem(SESSION_KEY); SESSION=null; }
-  let SESSION = loadSession();
-
-  // ===== RBAC =====
-  const isSuperAdmin = ()=> SESSION?.role==='superadmin';
-  const isManagerOf = (agency)=> SESSION?.role==='manager' && SESSION.agencyId===agency.id;
-  const isViewerOf = (agency)=> SESSION?.role==='viewer' && SESSION.agencyId===agency.id;
-  const canEditAgency = (agency)=> isSuperAdmin() || isManagerOf(agency);
-  const canEditBroadcaster = (b)=> { const ag = DB.agencies.find(a=>a.id===b.agencyId); return canEditAgency(ag); };
-
-  // ===== Business Logic =====
-  function genAgencyCode(){ const used = new Set(DB.agencies.map(a=>a.agencyCode)); let code; do{ const n=Math.floor(Math.random()*1_000_000).toString().padStart(6,'0'); code=`AG-${n}`; }while(used.has(code)); return code; }
-  function getPayrollTable(agency){ return Array.isArray(agency.payrollTable)&&agency.payrollTable.length? agency.payrollTable : DEFAULT_PAYROLL; }
-  function computeBroadcasterSalaryUSD(b, agency){
-    const tbl = getPayrollTable(agency);
-    const beans=Number(b.beans||0), hrs=Number(b.hours||0), dys=Number(b.days||0);
-    const matched = tbl.filter(r=> beans>=r.minBeans && beans<=r.maxBeans && hrs>=r.minHours && dys>=r.minDays);
-    if(!matched.length) return 0;
-    return matched.reduce((m,r)=> Math.max(m, Number(r.salaryUSD||0)), 0);
-  }
-  function computeAgencyStats(agency){
-    const list=DB.broadcasters.filter(b=>b.agencyId===agency.id);
-    const totalBeans=list.reduce((s,b)=>s+Number(b.beans||0),0);
-    const sumHours=list.reduce((s,b)=>s+Number(b.hours||0),0);
-    const sumDays=list.reduce((s,b)=>s+Number(b.days||0),0);
-    const bc=list.length;
-    const cfg=agency.billingConfig||{beansToCurrencyRate:0.01,baseFee:0,hourBonus:0,dayBonus:0};
-    const monthlyInvoice=Number(cfg.baseFee||0)+(totalBeans*(Number(cfg.beansToCurrencyRate)||0))+(sumHours*(Number(cfg.hourBonus)||0))+(sumDays*(Number(cfg.dayBonus)||0));
-    const totalSalariesUSD = list.reduce((s,b)=> s + computeBroadcasterSalaryUSD(b, agency), 0);
-    agency.stats={totalBeans,broadcastersCount:bc,monthlyInvoice,totalSalariesUSD};
-    return agency.stats;
-  }
-  function log(agency,text){ agency.logs=agency.logs||[]; agency.logs.unshift({ts:nowISO(),text}); if(agency.logs.length>50) agency.logs.pop(); }
-
-  // ===== Auth Handlers =====
-  const authEl = $('#auth');
-  const appEl = $('#app');
-  $('#togglePass').addEventListener('click', ()=>{ const p=$('#loginPass'); p.type = p.type==='password'?'text':'password'; });
-  $('#btnFillDemo').addEventListener('click', ()=>{ $('#loginUser').value='admin'; $('#loginPass').value='1234'; $('#loginMsg').textContent='تم ملء بيانات المشرف العام للتجربة'; });
-  $('#btnResetData').addEventListener('click', ()=>{
-    if(confirm('سيتم إعادة تهيئة البيانات والحسابات الافتراضية. متابعة؟')){
-      localStorage.removeItem(DB_KEY);
-      localStorage.removeItem(SESSION_KEY);
-      DB = loadDB();
-      SESSION = null;
-      $('#loginMsg').textContent='تمت إعادة التهيئة. جرّب admin / 1234';
-    }
+    agenciesList.appendChild(div);
   });
-  $('#btnLogin').addEventListener('click', doLogin);
-  $('#loginForm').addEventListener('submit', doLogin);
+  addAgencyBtn.style.display=(currentUser.role==="Admin"||currentUser.role==="Manager")?"inline-block":"none";
+}
+function copyCode(code){navigator.clipboard.writeText(code);alert("✅ تم نسخ كود الوكالة: "+code);}
 
-  function doLogin(e){
-    if(e) e.preventDefault();
-    const u = normalizeDigits($('#loginUser').value);
-    const p = normalizeDigits($('#loginPass').value);
-    const msg = $('#loginMsg');
-    if(!u || !p){ msg.textContent='أدخل اسم المستخدم وكلمة السر'; return false; }
-    // superadmin
-    if(u===SUPERADMIN.user && p===SUPERADMIN.pass){ setSession({role:'superadmin'}); applyRoleUI(); return true; }
-    // per-agency accounts
-    for(const a of DB.agencies){
-      if(a.loginManager && a.loginManager.user===u && a.loginManager.pass===p){ setSession({role:'manager', agencyId:a.id}); applyRoleUI(); return true; }
-      if(a.loginViewer && a.loginViewer.user===u && a.loginViewer.pass===p){ setSession({role:'viewer', agencyId:a.id}); applyRoleUI(); return true; }
-    }
-    msg.textContent='بيانات الدخول غير صحيحة'; return false;
-  }
-  function logout(){ clearSession(); location.hash=''; renderAuth(); }
-  $('#btnLogout').addEventListener('click', logout);
+// CRUD Agencies
+function showAgencyForm(){if(currentUser.role==="Viewer")return;editingAgency=null;agencyForm.classList.remove("hidden");}
+function editAgency(i){if(currentUser.role==="Viewer")return;editingAgency=i;let a=agencies[i];agencyName.value=a.name;agencyAgent.value=a.agentName;agencyCountry.value=a.country;agencyLikee.value=a.likee;agencyManager.value=a.manager;agencyForm.classList.remove("hidden");}
+function saveAgency(){if(currentUser.role==="Viewer")return; if(editingAgency!==null){let a=agencies[editingAgency];a.name=agencyName.value;a.agentName=agencyAgent.value;a.country=agencyCountry.value;a.likee=agencyLikee.value;a.manager=agencyManager.value;} else {let id="AG-"+Math.floor(Math.random()*999999);let agentUser="agent"+id;let agentPass=Math.floor(1000+Math.random()*9000).toString();let a={id,name:agencyName.value,agentName:agencyAgent.value,country:agencyCountry.value,likee:agencyLikee.value,manager:agencyManager.value,agentUser,agentPass,broadcasters:[]};agencies.push(a);users.push({username:agentUser,password:agentPass,role:"Agent",agencyIndex:agencies.length-1});}cancelForms();renderAgencies();}
+function deleteAgency(i){if(!(currentUser.role==="Admin"||currentUser.role==="Manager"))return;agencies.splice(i,1);renderAgencies();}
 
-  function renderAuth(){ authEl.style.display='flex'; appEl.style.display='none'; $('#loginMsg').textContent=''; }
-  function renderApp(){ authEl.style.display='none'; appEl.style.display='block'; updateUserBadge(); showList(); applyRoleVisibility(); }
-  function updateUserBadge(){
-    const b=$('#userBadge');
-    if(isSuperAdmin()){ b.textContent='المشرف العام'; return; }
-    const ag = DB.agencies.find(x=> x.id===SESSION?.agencyId);
-    if(!ag){ b.textContent='غير مسجل'; return; }
-    b.textContent = SESSION.role==='manager' ? `مدير – ${ag.agencyCode}` : `وكيل (عرض فقط) – ${ag.agencyCode}`;
-  }
-  function applyRoleUI(){ if(SESSION){ renderApp(); if(!isSuperAdmin()){ openAgency(SESSION.agencyId); } } else { renderAuth(); } }
-
-  // ===== Rendering: List Page =====
-  const listEl = $('#agenciesList'); const listTools = $('#listTools');
-  function renderAgencies(){
-    listEl.innerHTML='';
-    const q=$('#searchInput').value.trim().toLowerCase(); const c=$('#countryFilter').value.trim().toLowerCase();
-    let items = DB.agencies.filter(a=>{ const hay=[a.agencyName,a.agencyCode,a.managerName,a.agentLikeeId].join(' ').toLowerCase(); const matchQ=!q || hay.includes(q); const matchC=!c || (a.agentCountry||'').toLowerCase()===c; return matchQ && matchC; });
-
-    if(items.length===0){ listEl.innerHTML = `<div class="empty">لا توجد وكالات. اضغط <span class="kbd">+ وكالة</span> لإضافة أول وكالة.</div>`; return; }
-
-    items.forEach(a=>{
-      computeAgencyStats(a);
-      const card=document.createElement('div'); card.className='card agency-card';
-      const canEdit = canEditAgency(a);
-      card.innerHTML = `
-        <div class="agency-name">${a.agencyName}</div>
-        <div class="agency-code">${a.agencyCode} <span class="copy-ico" title="نسخ" data-code="${a.agencyCode}">⧉</span></div>
-        <div class="subtle">${a.agentName} (${a.agentCountry}) · Likee ID: ${a.agentLikeeId}</div>
-        <div class="subtle">مسؤول الوكالة: <b>${a.managerName}</b></div>
-        <div class="badges">
-          <div class="badge tooltip" data-tip="${fmt(a.stats.totalBeans)}"><span>🎉 إجمالي الفاصوليا</span> <span class="val">${shortNumber(a.stats.totalBeans)}</span></div>
-          <div class="badge"><span>👥 المذيعون</span> <span class="val">${a.stats.broadcastersCount}</span></div>
-          <div class="badge tooltip" data-tip="${fmtMoney(a.stats.monthlyInvoice)}"><span>💰 الفاتورة الشهرية</span> <span class="val">${fmtMoney(a.stats.monthlyInvoice)}</span></div>
-          <div class="badge tooltip" data-tip="إجمالي الرواتب بالدولار">
-            💵 <span>إجمالي الرواتب</span> <span class="val">$${fmt(a.stats.totalSalariesUSD.toFixed(2))}</span>
-          </div>
-        </div>
-        <div class="agency-footer">
-          <button class="btn" data-open="${a.id}">عرض التفاصيل</button>
-          ${canEdit? `<button class="btn ghost" data-edit="${a.id}">تعديل</button>`:''}
-          ${isSuperAdmin()? `<button class="btn ghost" data-delete="${a.id}">حذف</button>`:''}
-        </div>`;
-      card.querySelector('.copy-ico').addEventListener('click',()=> copy(a.agencyCode));
-      card.querySelector('[data-open]').addEventListener('click',()=> openAgency(a.id));
-      if(canEdit) card.querySelector('[data-edit]')?.addEventListener('click',()=> openAgencyModal(a));
-      if(isSuperAdmin()) card.querySelector('[data-delete]')?.addEventListener('click',()=> deleteAgency(a.id));
-      listEl.appendChild(card);
-    });
-  }
-
-  function applyRoleVisibility(){
-    if(isSuperAdmin()){
-      $('#btnNewAgency').style.display='inline-block';
-      $('#btnExportAll').style.display='inline-block';
-      listTools.style.display='flex';
-    }else{
-      $('#btnNewAgency').style.display='none';
-      $('#btnExportAll').style.display='none';
-      listTools.style.display='none';
-    }
-  }
-
-  function showList(){ $('#agencyDetail').classList.remove('active'); $('#agenciesList').style.display='grid'; renderAgencies(); $('#btnBackHome').style.display='none'; }
-  function showDetail(){ $('#agenciesList').style.display='none'; $('#agencyDetail').classList.add('active'); $('#btnBackHome').style.display= isSuperAdmin()? 'inline-block':'none'; }
-  function openAgency(id){ location.hash = `#agency/${id}`; }
-  function handleHash(){ const h=location.hash; const m=h.match(/^#agency\/(.+)$/); if(m){ const id=m[1]; const agency=DB.agencies.find(a=>a.id===id); if(agency){ renderAgencyDetail(agency); showDetail(); } else { showList(); } } else { showList(); } }
-  window.addEventListener('hashchange', handleHash);
-
-  // ===== CRUD: Agencies =====
-  const modalAgency=$('#modalAgency'); const agencyForm=$('#agencyForm'); let editingAgency=null;
-  function openAgencyModal(agency=null){ if(!isSuperAdmin() && !(agency && canEditAgency(agency))) { toast('ليس لديك صلاحية تعديل هذه الوكالة','warn'); return; } editingAgency=agency; $('#agencyModalTitle').textContent=agency? 'تعديل وكالة':'إنشاء وكالة'; agencyForm.reset(); const cfg=agency?.billingConfig||{beansToCurrencyRate:0.01, baseFee:0, hourBonus:0, dayBonus:0}; agencyForm.agencyName.value=agency?.agencyName||''; agencyForm.agentName.value=agency?.agentName||''; agencyForm.agentCountry.value=agency?.agentCountry||''; agencyForm.agentLikeeId.value=agency?.agentLikeeId||''; agencyForm.managerName.value=agency?.managerName||''; agencyForm.beansToCurrencyRate.value=cfg.beansToCurrencyRate; agencyForm.baseFee.value=cfg.baseFee; agencyForm.hourBonus.value=cfg.hourBonus; agencyForm.dayBonus.value=cfg.dayBonus; modalAgency.classList.add('open'); setTimeout(()=> agencyForm.agencyName.focus(), 30); }
-  function closeAgencyModal(){ modalAgency.classList.remove('open'); }
-  $('#btnNewAgency').addEventListener('click',()=> openAgencyModal());
-  $('#closeAgencyModal').addEventListener('click', closeAgencyModal);
-  agencyForm.addEventListener('submit', (e)=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(agencyForm).entries()); data.agentLikeeId = String(data.agentLikeeId||'').replace(/[^a-zA-Z0-9]/g,''); const billingConfig={ beansToCurrencyRate:Number(data.beansToCurrencyRate||0), baseFee:Number(data.baseFee||0), hourBonus:Number(data.hourBonus||0), dayBonus:Number(data.dayBonus||0)}; if(editingAgency){ Object.assign(editingAgency,{ agencyName:data.agencyName, agentName:data.agentName, agentCountry:data.agentCountry, agentLikeeId:data.agentLikeeId, managerName:data.managerName, billingConfig, updatedAt:nowISO() }); log(editingAgency,'تم تعديل بيانات الوكالة'); }else{ const ag={ id:crypto.randomUUID(), agencyName:data.agencyName, agencyCode:genAgencyCode(), agentName:data.agentName, agentCountry:data.agentCountry, agentLikeeId:data.agentLikeeId, managerName:data.managerName, billingConfig, stats:{totalBeans:0,broadcastersCount:0,monthlyInvoice:0,totalSalariesUSD:0}, broadcasters:[], createdAt:nowISO(), updatedAt:nowISO(), logs:[], loginManager:null, loginViewer:null, payrollTable: DEFAULT_PAYROLL }; DB.agencies.unshift(ag); log(ag,'تم إنشاء الوكالة'); } saveDB(DB); toast('تم الحفظ ✅','ok'); closeAgencyModal(); renderAgencies(); });
-
-  function deleteAgency(id){ if(!isSuperAdmin()) return toast('صلاحية المشرف فقط','warn'); if(!confirm('سيتم حذف الوكالة وكل المذيعين المرتبطين بها محليًا. متأكد؟')) return; DB.agencies = DB.agencies.filter(a=>a.id!==id); DB.broadcasters = DB.broadcasters.filter(b=>b.agencyId!==id); saveDB(DB); toast('تم الحذف','warn'); if(location.hash===`#agency/${id}`){ location.hash=''; } renderAgencies(); }
-
-  // ===== Detail View =====
-  let currentAgency=null;
-  function renderAgencyHeader(agency){
-    computeAgencyStats(agency);
-    $('#detailCode').textContent=agency.agencyCode;
-    const canEdit = canEditAgency(agency);
-    $('#detailAgencyCard').innerHTML = `
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
-        <div>
-          <div class="agency-name">${agency.agencyName}</div>
-          <div class="subtle">${agency.agentName} (${agency.agentCountry}) · Likee ID: ${agency.agentLikeeId}</div>
-          <div class="subtle">مسؤول الوكالة: <b>${agency.managerName}</b></div>
-        </div>
-        <div class="badges">
-          <div class="badge tooltip" data-tip="${fmt(agency.stats.totalBeans)}">🎉 <span>إجمالي الفاصوليا</span> <span class="val">${shortNumber(agency.stats.totalBeans)}</span></div>
-          <div class="badge">👥 <span>عدد المذيعين</span> <span class="val">${agency.stats.broadcastersCount}</span></div>
-          <div class="badge tooltip" data-tip="${fmtMoney(agency.stats.monthlyInvoice)}">💰 <span>الفاتورة الشهرية</span> <span class="val">${fmtMoney(agency.stats.monthlyInvoice)}</span></div>
-          <div class="badge tooltip" data-tip="إجمالي الرواتب بالدولار">
-            💵 <span>إجمالي الرواتب</span> <span class="val">$${fmt(agency.stats.totalSalariesUSD.toFixed(2))}</span>
-          </div>
-        </div>
+// Agency Page
+function openAgency(i,readonly=false){currentAgency=i;homePage.classList.add("hidden");agencyPage.classList.remove("hidden");renderAgencyPage(readonly);}
+function goHome(){agencyPage.classList.add("hidden");homePage.classList.remove("hidden");}
+function renderAgencyPage(readonly=false){
+  let a=agencies[currentAgency];let totalBeans=0,totalSalary=0;a.broadcasters.forEach(b=>{let {salary}=calculateSalary(b.beans);totalBeans+=b.beans;totalSalary+=salary;});
+  agencyInfo.innerHTML=`
+    <div class="agency-card">
+      <div class="agency-center">
+        <div class="agency-name">${a.name}</div>
+        <div class="agency-code">${a.id} <button class="copy-btn" onclick="copyCode('${a.id}')">📋 نسخ</button></div>
+        <div>${a.country}</div>
       </div>
-      <div class="divider"></div>
-      <div class="subtle">آخر تحديث: ${new Date(agency.updatedAt).toLocaleString('ar-EG')}</div>`;
-    // أدوات التفاصيل حسب الصلاحية
-    $('#btnAddBroadcaster').style.display = canEdit ? 'inline-block':'none';
-    $('#btnBilling').style.display = canEdit ? 'inline-block':'none';
-    $('#btnPayroll').style.display = canEdit ? 'inline-block':'none';
-    $('#btnAuthSettings').style.display = canEdit ? 'inline-block':'none';
-    $('#btnExportCSV').style.display = canEdit ? 'inline-block':'none';
+      <div class="agency-right">
+        <p>👤 الوكيل: ${a.agentName}</p>
+        <p>📱 Likee ID: ${a.likee}</p>
+        <p>👨‍💼 المدير: ${a.manager}</p>
+      </div>
+    </div>
+    <div class="countdown" id="countdown">--</div>
+  `;
+  if(currentUser.role==="Admin" || currentUser.role==="Manager"){
+    agencyInfo.innerHTML+=`
+      <h4>🔐 بيانات دخول الوكيل</h4>
+      <table border="1" style="width:100%;text-align:center;border-collapse:collapse;">
+        <tr><th>Username</th><th>Password</th>${currentUser.role==="Admin"?"<th>تغيير</th>":""}</tr>
+        <tr>
+          <td>${a.agentUser}</td>
+          <td>${a.agentPass}</td>
+          ${currentUser.role==="Admin" ? `<td><button onclick="changeAgentPass(${currentAgency})">🔑 تغيير</button></td>` : ""}
+        </tr>
+      </table>
+    `;
   }
+  beansSummary.innerText="🎉 "+totalBeans;broadcastersSummary.innerText="👥 "+a.broadcasters.length;invoiceSummary.innerText="💰 "+totalSalary+"$";
+  startCountdown();renderBroadcasters(readonly||currentUser.role==="Agent"||currentUser.role==="Viewer");
+  addBroadcasterBtn.style.display=(currentUser.role==="Admin"||currentUser.role==="Manager")?"inline-block":"none";
+}
 
-  function renderBroadcasters(agency){
-    const wrap=$('#broadcastersList'); wrap.innerHTML='';
-    const list=DB.broadcasters.filter(b=>b.agencyId===agency.id);
-    if(list.length===0){ wrap.innerHTML=`<div class="empty">لا يوجد مذيعون بعد. ${canEditAgency(agency)? 'اضغط <span class="kbd">+ إضافة مذيع</span>.':''}</div>`; return; }
-    list.forEach(b=>{
-      const el=document.createElement('div'); el.className='broadcaster';
-      const editable = canEditBroadcaster(b);
-      const salary = computeBroadcasterSalaryUSD(b, agency).toFixed(2);
-      el.innerHTML = `
-        <div class="b-top">
-          <div>
-            <div class="b-name">${b.name}</div>
-            <div class="b-id">Likee ID: ${b.likeeId}</div>
-            <div class="b-country">${b.country}</div>
-          </div>
-          <div class="subtle">آخر تحديث: ${new Date(b.updatedAt||b.createdAt).toLocaleString('ar-EG')}</div>
-        </div>
-        <div class="bars">
-          <div class="bar"><div class="label">فاصوليا</div><div class="value">${fmt(b.beans||0)}</div></div>
-          <div class="bar"><div class="label">أيام</div><div class="value">${fmt(b.days||0)} يوم</div></div>
-          <div class="bar"><div class="label">ساعات</div><div class="value">${fmt(b.hours||0)} ساعة</div></div>
-          <div class="bar"><div class="label">الراتب (USD)</div><div class="value">$${salary}</div></div>
-        </div>
-        <div class="b-actions">
-          ${editable? `<button class="btn" data-add-day="${b.id}">+1 يوم نشاط</button>`:''}
-          ${editable? `<button class="btn ghost" data-edit-b="${b.id}">تعديل</button>`:''}
-          ${editable? `<button class="btn ghost" data-beans="${b.id}">+1000 فاصوليا</button>`:''}
-          ${editable? `<button class="btn ghost" data-hours="${b.id}">+1 ساعة</button>`:''}
-          ${editable? `<button class="btn ghost" data-del-b="${b.id}">حذف</button>`:''}
-        </div>`;
-      if(editable){
-        el.querySelector('[data-add-day]')?.addEventListener('click', (ev)=> addDay(b, ev.target));
-        el.querySelector('[data-edit-b]')?.addEventListener('click', ()=> openBroadcasterModal(agency, b));
-        el.querySelector('[data-beans]')?.addEventListener('click', ()=> { b.beans=clamp((Number(b.beans)||0)+1000,0,MAX_BEANS); b.updatedAt=nowISO(); afterBroadcasterChange(agency); });
-        el.querySelector('[data-hours]')?.addEventListener('click', ()=> { b.hours=clamp((Number(b.hours)||0)+1,0,MAX_HOURS); b.updatedAt=nowISO(); afterBroadcasterChange(agency); });
-        el.querySelector('[data-del-b]')?.addEventListener('click', ()=> deleteBroadcaster(b));
-      }
-      wrap.appendChild(el);
-    });
+// Broadcaster CRUD
+function renderBroadcasters(readonly=false){
+  broadcasters.innerHTML="";
+  agencies[currentAgency].broadcasters.forEach((b,j)=>{
+    let {level,salary}=calculateSalary(b.beans);
+    let card=document.createElement("div");
+    card.className="broadcaster-card";
+    card.innerHTML=`<strong>${b.name}</strong> (${b.id}) - ${b.country}
+    <div>💎 Beans: ${b.beans} (${level}) ${makeBar(b.beans,1500000)}</div>
+    <div>📅 Days: ${b.days}${makeBar(b.days,30)}</div>
+    <div>⏱ Hours: ${b.hours}${makeBar(b.hours,200)}</div>
+    <p>💰 ${salary}$</p>
+    ${(currentUser.role==="Admin"||currentUser.role==="Manager")&&!readonly?`<button onclick="editBroadcaster(${j})">✏️</button><button onclick="deleteBroadcaster(${j})">🗑️</button>`:""}`;
+    broadcasters.appendChild(card);
+  });
+}
+
+function showBroadcasterForm(){if(currentUser.role==="Viewer")return;editingBroadcaster=null;broadcasterForm.classList.remove("hidden");}
+function editBroadcaster(j){if(currentUser.role==="Viewer")return;editingBroadcaster=j;let b=agencies[currentAgency].broadcasters[j];broadcasterName.value=b.name;broadcasterId.value=b.id;broadcasterCountry.value=b.country;broadcasterBeans.value=b.beans;broadcasterDays.value=b.days;broadcasterHours.value=b.hours;broadcasterForm.classList.remove("hidden");}
+function saveBroadcaster(){if(currentUser.role==="Viewer")return;let b={name:broadcasterName.value,id:broadcasterId.value,country:broadcasterCountry.value,beans:parseInt(broadcasterBeans.value),days:parseInt(broadcasterDays.value),hours:parseInt(broadcasterHours.value)};if(editingBroadcaster!==null){agencies[currentAgency].broadcasters[editingBroadcaster]=b;}else agencies[currentAgency].broadcasters.push(b);cancelForms();renderBroadcasters();}
+function deleteBroadcaster(j){if(!(currentUser.role==="Admin"||currentUser.role==="Manager"))return;agencies[currentAgency].broadcasters.splice(j,1);renderBroadcasters();}
+
+function makeBar(v,m){let p=Math.min(100,(v/m*100));return `<div class="progress-bar"><div class="progress" style="width:${p}%"></div></div>`;}
+
+function exportInvoiceExcel(){
+  let a=agencies[currentAgency];
+  let data=[["اسم المذيع","ID","Beans","أيام","ساعات","المستوى","الراتب"]];
+  a.broadcasters.forEach(b=>{
+    let {level,salary}=calculateSalary(b.beans);
+    data.push([b.name,b.id,b.beans,b.days,b.hours,level,salary+"$"]);
+  });
+  let ws=XLSX.utils.aoa_to_sheet(data);
+  let wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Invoice");
+  XLSX.writeFile(wb,`${a.name}_Invoice.xlsx`);
+}
+
+function exportInvoicePDF(){
+  let a=agencies[currentAgency];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text(`فاتورة الوكالة: ${a.name}`, 10, 10);
+  doc.text(`الكود: ${a.id}`, 10, 20);
+  let rows = [];
+  a.broadcasters.forEach(b => {
+    let { level, salary } = calculateSalary(b.beans);
+    rows.push([b.name, b.id, b.beans, b.days, b.hours, level, salary + "$"]);
+  });
+  let startY = 30;
+  doc.text("الاسم | ID | Beans | أيام | ساعات | المستوى | الراتب", 10, startY);
+  rows.forEach((r, i) => {
+    doc.text(r.join(" | "), 10, startY + 10 * (i + 1));
+  });
+  doc.save(`${a.name}_Invoice.pdf`);
+}
+
+// Dark Mode
+function toggleDarkMode() {
+  let b = document.body;
+  if (b.classList.contains("dark")) {
+    b.classList.remove("dark");
+    localStorage.setItem("mode", "light");
+    modeBtn.innerText = "🌙";
+  } else {
+    b.classList.add("dark");
+    localStorage.setItem("mode", "dark");
+    modeBtn.innerText = "☀️";
   }
+}
 
-  function addDay(b, btn){ btn.disabled=true; const maxD = daysInCurrentMonth(); b.days = clamp((Number(b.days)||0)+1, 0, maxD); b.updatedAt=nowISO(); toast('تم إضافة يوم نشاط ✅','ok'); afterBroadcasterChange(currentAgency); setTimeout(()=> btn.disabled=false, 800); }
-  function afterBroadcasterChange(agency){ agency.updatedAt=nowISO(); saveDB(DB); renderAgencyHeader(agency); renderBroadcasters(agency); }
-  function renderAgencyDetail(agency){ currentAgency=agency; renderAgencyHeader(agency); renderBroadcasters(agency); }
+(function initMode() {
+  let m = localStorage.getItem("mode") || "light";
+  if (m === "dark") document.body.classList.add("dark");
+  modeBtn.innerText = m === "dark" ? "☀️" : "🌙";
+})();
 
-  // ===== Broadcasters: Create/Edit/Delete =====
-  const modalBroadcaster=$('#modalBroadcaster'); const broadcasterForm=$('#broadcasterForm'); let editingBroadcaster=null;
-  function openBroadcasterModal(agency, b=null){ if(!canEditAgency(agency)) return toast('صلاحيات المدير فقط','warn'); editingBroadcaster=b; broadcasterForm.reset(); $('#broadcasterModalTitle').textContent = b? 'تعديل مذيع':'إضافة مذيع'; broadcasterForm.name.value=b?.name||''; broadcasterForm.likeeId.value=b?.likeeId||''; broadcasterForm.country.value=b?.country||''; broadcasterForm.beans.value=b?.beans??0; broadcasterForm.days.value=b?.days??0; broadcasterForm.hours.value=b?.hours??0; broadcasterForm.days.max = String(daysInCurrentMonth()); modalBroadcaster.classList.add('open'); setTimeout(()=> broadcasterForm.name.focus(), 30); }
-  function closeBroadcasterModal(){ modalBroadcaster.classList.remove('open'); }
-  $('#btnAddBroadcaster').addEventListener('click',()=> openBroadcasterModal(currentAgency));
-  $('#closeBroadcasterModal').addEventListener('click', closeBroadcasterModal);
-  broadcasterForm.addEventListener('submit',(e)=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(broadcasterForm).entries()); data.likeeId = String(data.likeeId||'').replace(/[^a-zA-Z0-9]/g,''); const beans=clamp(data.beans,0,MAX_BEANS); const days=clamp(data.days,0,daysInCurrentMonth()); const hours=clamp(data.hours,0,MAX_HOURS); if(editingBroadcaster){ Object.assign(editingBroadcaster,{ name:data.name, likeeId:data.likeeId, country:data.country, beans, days, hours, updatedAt:nowISO() }); log(currentAgency, `تعديل مذيع: ${editingBroadcaster.name}`); }else{ const b={ id:crypto.randomUUID(), name:data.name, likeeId:data.likeeId, country:data.country, beans, days, hours, agencyId: currentAgency.id, createdAt:nowISO(), updatedAt:nowISO() }; DB.broadcasters.unshift(b); log(currentAgency, `إضافة مذيع: ${b.name}`); } saveDB(DB); toast('تم الحفظ ✅','ok'); closeBroadcasterModal(); renderAgencyDetail(currentAgency); });
-  function deleteBroadcaster(b){ if(!canEditBroadcaster(b)) return; if(!confirm('حذف هذا المذيع؟')) return; DB.broadcasters = DB.broadcasters.filter(x=>x.id!==b.id); saveDB(DB); log(currentAgency, `حذف مذيع: ${b.name}`); toast('تم الحذف','warn'); renderAgencyDetail(currentAgency); }
-
-  // ===== Billing Config =====
-  const modalBilling=$('#modalBilling'); const billingForm=$('#billingForm');
-  $('#btnBilling').addEventListener('click',()=>{ if(!canEditAgency(currentAgency)) return toast('صلاحيات المدير فقط','warn'); const cfg=currentAgency.billingConfig||{beansToCurrencyRate:0.01, baseFee:0, hourBonus:0, dayBonus:0}; billingForm.beansToCurrencyRate.value=cfg.beansToCurrencyRate; billingForm.baseFee.value=cfg.baseFee; billingForm.hourBonus.value=cfg.hourBonus; billingForm.dayBonus.value=cfg.dayBonus; modalBilling.classList.add('open'); });
-  $('#closeBillingModal').addEventListener('click',()=> modalBilling.classList.remove('open'));
-  billingForm.addEventListener('submit',(e)=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(billingForm).entries()); currentAgency.billingConfig={ beansToCurrencyRate:Number(data.beansToCurrencyRate||0), baseFee:Number(data.baseFee||0), hourBonus:Number(data.hourBonus||0), dayBonus:Number(data.dayBonus||0) }; currentAgency.updatedAt=nowISO(); log(currentAgency,'تعديل إعدادات الفاتورة'); saveDB(DB); modalBilling.classList.remove('open'); renderAgencyDetail(currentAgency); toast('تم تطبيق الإعدادات ✅','ok'); });
-
-  // ===== Payroll Table per Agency =====
-  const modalPayroll = $('#modalPayroll'); const payrollForm = $('#payrollForm');
-  $('#btnPayroll').addEventListener('click',()=>{
-    if(!canEditAgency(currentAgency)) return toast('صلاحيات المدير فقط','warn');
-    const tbl = getPayrollTable(currentAgency);
-    $('#payrollJSON').value = JSON.stringify(tbl, null, 2);
-    modalPayroll.classList.add('open');
-  });
-  $('#closePayroll').addEventListener('click',()=> modalPayroll.classList.remove('open'));
-  payrollForm.addEventListener('submit',(e)=>{
-    e.preventDefault();
-    try{
-      const parsed = JSON.parse($('#payrollJSON').value);
-      if(!Array.isArray(parsed)) throw new Error('bad');
-      currentAgency.payrollTable = parsed;
-      currentAgency.updatedAt=nowISO();
-      saveDB(DB);
-      modalPayroll.classList.remove('open');
-      renderAgencyDetail(currentAgency);
-      toast('تم حفظ جدول الرواتب ✅','ok');
-    }catch(err){ toast('خطأ في صيغة JSON','danger'); }
-  });
-
-  // ===== Auth Settings per Agency =====
-  const modalAuthSettings=$('#modalAuthSettings'); const authSettingsForm=$('#authSettingsForm');
-  $('#btnAuthSettings').addEventListener('click',()=>{ if(!canEditAgency(currentAgency)) return toast('صلاحيات المدير فقط','warn'); authSettingsForm.reset(); authSettingsForm.mUser.value = currentAgency.loginManager?.user||''; authSettingsForm.mPass.value = currentAgency.loginManager?.pass||''; authSettingsForm.vUser.value = currentAgency.loginViewer?.user||''; authSettingsForm.vPass.value = currentAgency.loginViewer?.pass||''; modalAuthSettings.classList.add('open'); });
-  $('#closeAuthSettings').addEventListener('click',()=> modalAuthSettings.classList.remove('open'));
-  authSettingsForm.addEventListener('submit',(e)=>{ e.preventDefault(); const d=Object.fromEntries(new FormData(authSettingsForm).entries()); currentAgency.loginManager = (d.mUser||d.mPass)? {user:d.mUser||'', pass:d.mPass||''}: null; currentAgency.loginViewer  = (d.vUser||d.vPass)? {user:d.vUser||'', pass:d.vPass||''}: null; currentAgency.updatedAt=nowISO(); saveDB(DB); modalAuthSettings.classList.remove('open'); toast('تم حفظ بيانات الدخول ✅','ok'); updateUserBadge(); });
-
-  // ===== Export =====
-  function download(filename, text){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=filename; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 500); }
-  $('#btnExportAll').addEventListener('click',()=>{ download('sub_agencies_backup.json', JSON.stringify(DB,null,2)); });
-  $('#btnExportCSV').addEventListener('click',()=>{ if(!currentAgency) return; const list=DB.broadcasters.filter(b=>b.agencyId===currentAgency.id); const rows=[["id","name","likeeId","country","beans","days","hours","salaryUSD","updatedAt"]].concat(list.map(b=>[b.id,b.name,b.likeeId,b.country,b.beans,b.days,b.hours,computeBroadcasterSalaryUSD(b,currentAgency).toFixed(2),b.updatedAt])); const csv=rows.map(r=> r.map(x=> `"${String(x).replaceAll('"','""')}"`).join(',')).join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=`${currentAgency.agencyCode}_broadcasters.csv`; a.click(); setTimeout(()=> URL.revokeObjectURL(a.href), 500); });
-
-  // ===== Keyboard & Search =====
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ ['#modalAgency','#modalBroadcaster','#modalBilling','#modalAuthSettings','#modalPayroll'].forEach(id=> $(id).classList.remove('open')); } });
-  $('#backToList').addEventListener('click', ()=> { location.hash=''; });
-  $('#btnBackHome').addEventListener('click', ()=> { location.hash=''; });
-  $('#searchInput').addEventListener('input', renderAgencies);
-  $('#countryFilter').addEventListener('change', renderAgencies);
-
-  // ===== Init =====
-  function init(){ handleHash(); if(SESSION){ renderApp(); if(!isSuperAdmin()){ openAgency(SESSION.agencyId); } } else { renderAuth(); } }
-  init();
-  </script>
+// Lang
+let lang = "ar";
+const translations = {
+  ar: { loginTitle: "🔐 تسجيل الدخول", loginBtn: "دخول", addAgencyBtn: "➕ إضافة وكالة", addBroadcasterBtn: "➕ إضافة مذيع", backBtn: "⬅ رجوع", agenciesLabel: "🏢 الوكالات", broadcastersLabel: "🎙 المذيعين" },
+  en: { loginTitle: "🔐 Login", loginBtn: "Login", addAgencyBtn: "➕ Add Agency", addBroadcasterBtn: "➕ Add Broadcaster", backBtn: "⬅ Back", agenciesLabel: "🏢 Agencies", broadcastersLabel: "🎙 Broadcasters" }
+};
+function toggleLang() { lang = (lang === "ar" ? "en" : "ar"); localStorage.setItem("lang", lang); applyLang(); }
+function applyLang() {
+  let t = translations[lang];
+  loginTitle.innerText = t.loginTitle;
+  loginBtn.innerText = t.loginBtn;
+  addAgencyBtn.innerText = t.addAgencyBtn;
+  addBroadcasterBtn.innerText = t.addBroadcasterBtn;
+  backBtn.innerText = t.backBtn;
+  agenciesLabel.innerText = t.agenciesLabel;
+  broadcastersLabel.innerText = t.broadcastersLabel;
+  langBtn.innerText = (lang === "ar" ? "EN" : "AR");
+}
+(function initLang() { lang = localStorage.getItem("lang") || "ar"; applyLang(); })();
+</script>
 </body>
 </html>
